@@ -4,7 +4,6 @@
 
 import { ImageProcessor } from './image-processor.js';
 import { LayerGenerator } from './layer-generator.js';
-import { ThreeViewer } from './three-viewer.js';
 import { SvgExporter } from './svg-exporter.js';
 
 // ---- Modules ----
@@ -12,6 +11,7 @@ const imageProcessor = new ImageProcessor();
 const layerGenerator = new LayerGenerator();
 const svgExporter = new SvgExporter();
 let viewer = null;
+let ThreeViewer = null;
 
 // ---- State ----
 let currentLayers = null;
@@ -308,8 +308,12 @@ async function generateLayers() {
     showProgress(85, 'Staviam 3D model...');
     await yieldToUI();
 
-    // Build 3D view
+    // Build 3D view (lazy-load Three.js only when needed)
     if (!viewer) {
+        if (!ThreeViewer) {
+            const module = await import('./three-viewer.js');
+            ThreeViewer = module.ThreeViewer;
+        }
         viewer = new ThreeViewer(threeCanvas);
     }
     viewerPlaceholder.style.display = 'none';
