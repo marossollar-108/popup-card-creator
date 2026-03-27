@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pop-Up Card Creator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Pop-Up Card Creator</h1>
+        <div class="header-actions">
+            <button id="btn-upload" class="btn btn-primary">Nahrať obrázok</button>
+            <button id="btn-export" class="btn btn-secondary" disabled>Exportovať SVG</button>
+        </div>
+    </header>
+
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojový obrázok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint">
+                        <p>Presuňte obrázok sem<br>alebo kliknite na "Nahrať obrázok"</p>
+                    </div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+
+            <section class="controls-section">
+                <h2>Nastavenia</h2>
+
+                <div class="control-group">
+                    <label>Metóda extrakcie pozadia: <span class="tooltip" data-tip="Ako sa odlíši objekt od pozadia. Auto — predpokladá, že rohy obrázka sú pozadie a vyplní ho odtiaľ. Alpha — použije priehľadnosť PNG. Klik — kliknite na obrázok a zvolená farba sa označí ako pozadie.">?</span></label>
+                    <select id="bg-method">
+                        <option value="auto">Auto (flood fill z rohov)</option>
+                        <option value="alpha">Alpha kanál (PNG)</option>
+                        <option value="click">Klik na farbu pozadia</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Tolerancia: <span id="threshold-val">30</span> <span class="tooltip" data-tip="Ako veľmi sa farba môže líšiť od pozadia a stále byť považovaná za pozadie. Nízka hodnota = presné, ale môže nechať zvyšky. Vysoká = agresívnejšie, ale môže zožrať aj časti objektu.">?</span></label>
+                    <input type="range" id="threshold" min="1" max="100" value="30">
+                </div>
+
+                <div class="control-group">
+                    <label>Počet vrstiev: <span id="layers-val">5</span> <span class="tooltip" data-tip="Koľko plátov bude mať pop-up karta. Viac vrstiev = väčší 3D efekt hĺbky, ale zložitejšie na vyrezanie. 3–4 pre jednoduchú kartu, 6–8 pre detailnú.">?</span></label>
+                    <input type="range" id="layer-count" min="3" max="8" value="5">
+                </div>
+
+                <div class="control-group">
+                    <label>Sila erózie: <span id="erosion-val">8</span> <span class="tooltip" data-tip="O koľko pixelov sa každá ďalšia vrstva zmenší oproti predchádzajúcej. Malá hodnota = vrstvy sú si podobné (jemný efekt). Veľká = vrstvy sa rýchlo zmenšujú (dramatický efekt hĺbky).">?</span></label>
+                    <input type="range" id="erosion-strength" min="3" max="20" value="8">
+                </div>
+
+                <div class="control-group">
+                    <label>Farby vrstiev: <span class="tooltip" data-tip="Farba každej vrstvy v 3D náhľade. Zadná vrstva je vľavo, predná vpravo. Nemá vplyv na SVG šablóny na vyrezanie.">?</span></label>
+                    <div id="color-pickers" class="color-pickers"></div>
+                </div>
+
+                <button id="btn-generate" class="btn btn-primary btn-full" disabled>Generovať vrstvy</button>
+                <div id="progress-bar" class="progress-bar" hidden>
+                    <div class="progress-bar-track">
+                        <div id="progress-fill" class="progress-bar-fill"></div>
+                    </div>
+                    <span id="progress-text" class="progress-text">Spracovávam...</span>
+                </div>
+            </section>
+        </aside>
+
+        <section class="panel-right">
+            <h2>3D Náhľad</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder">
+                    <p>Nahrajte obrázok a vygenerujte vrstvy<br>pre zobrazenie 3D náhľadu</p>
+                </div>
+            </div>
+            <div class="viewer-controls">
+                <label>Otvorenie karty: <span id="open-angle-val">90°</span></label>
+                <input type="range" id="open-angle" min="0" max="180" value="90">
+                <button id="btn-animate" class="btn btn-small">&#9654; Animácia</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <section class="layers-preview">
+            <h2>Náhľad vrstiev</h2>
+            <div id="layers-strip" class="layers-strip">
+                <p class="placeholder-text">Vrstvy sa zobrazia po generovaní</p>
+            </div>
+        </section>
+    </footer>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
