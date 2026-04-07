@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App5 — Tooltips</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Pop-Up Card Creator</h1>
+        <div class="header-actions">
+            <button id="btn-upload" class="btn btn-primary">Nahrat obrazok</button>
+            <button id="btn-export" class="btn btn-secondary" disabled>Exportovat SVG</button>
+        </div>
+    </header>
+
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint">
+                        <p>Presunte obrazok sem<br>alebo kliknite na "Nahrat obrazok"</p>
+                    </div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+
+            <section class="controls-section">
+                <h2>Nastavenia</h2>
+
+                <div class="control-group">
+                    <label>Metoda extrakcie pozadia: <span class="tooltip" data-tip="Ako sa odlisi objekt od pozadia. Auto — predpoklada, ze rohy obrazka su pozadie a vyplni ho odtial. Alpha — pouzije priehladnost PNG. Klik — kliknite na obrazok a zvolena farba sa oznaci ako pozadie.">?</span></label>
+                    <select id="bg-method">
+                        <option value="auto">Auto (flood fill z rohov)</option>
+                        <option value="alpha">Alpha kanal (PNG)</option>
+                        <option value="click">Klik na farbu pozadia</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Tolerancia: <span id="threshold-val">30</span> <span class="tooltip" data-tip="Ako velmi sa farba moze lisit od pozadia a stale byt povazovana za pozadie.">?</span></label>
+                    <input type="range" id="threshold" min="1" max="100" value="30">
+                </div>
+
+                <div class="control-group">
+                    <label>Pocet vrstiev: <span id="layers-val">5</span> <span class="tooltip" data-tip="Kolko platov bude mat pop-up karta.">?</span></label>
+                    <input type="range" id="layer-count" min="3" max="8" value="5">
+                </div>
+
+                <div class="control-group">
+                    <label>Sila erozie: <span id="erosion-val">8</span> <span class="tooltip" data-tip="O kolko pixelov sa kazda dalsia vrstva zmensi oproti predchadzajucej.">?</span></label>
+                    <input type="range" id="erosion-strength" min="3" max="20" value="8">
+                </div>
+
+                <div class="control-group">
+                    <label>Farby vrstiev: <span class="tooltip" data-tip="Farba kazdej vrstvy v 3D nahlde.">?</span></label>
+                    <div id="color-pickers" class="color-pickers"></div>
+                </div>
+
+                <button id="btn-generate" class="btn btn-primary btn-full" disabled>Generovat vrstvy</button>
+                <div id="progress-bar" class="progress-bar" hidden>
+                    <div class="progress-bar-track">
+                        <div id="progress-fill" class="progress-bar-fill"></div>
+                    </div>
+                    <span id="progress-text" class="progress-text">Spracovavam...</span>
+                </div>
+            </section>
+        </aside>
+
+        <section class="panel-right">
+            <h2>3D Nahlad</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder">
+                    <p>Nahrajte obrazok a vygenerujte vrstvy<br>pre zobrazenie 3D nahladu</p>
+                </div>
+            </div>
+            <div class="viewer-controls">
+                <label>Otvorenie karty: <span id="open-angle-val">90°</span></label>
+                <input type="range" id="open-angle" min="0" max="180" value="90">
+                <button id="btn-animate" class="btn btn-small">&#9654; Animacia</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <section class="layers-preview">
+            <h2>Nahlad vrstiev</h2>
+            <div id="layers-strip" class="layers-strip">
+                <p class="placeholder-text">Vrstvy sa zobrazia po generovani</p>
+            </div>
+        </section>
+    </footer>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test JS Loading</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header><h1>Test JS Loading</h1></header>
+    <main>
+        <aside class="panel-left">
+            <p id="status" style="padding:20px;color:#0f0;">Loading...</p>
+        </aside>
+        <section class="panel-right">
+            <div id="log" style="padding:20px;font-family:monospace;font-size:13px;"></div>
+        </section>
+    </main>
+
+    <script>
+        const log = document.getElementById('log');
+        function addLog(msg) {
+            const p = document.createElement('p');
+            p.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+            log.appendChild(p);
+        }
+
+        addLog('Step 1: Basic JS OK');
+    </script>
+
+    <script>
+        addLog('Step 2: Loading JSZip from CDN...');
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script>
+        addLog('Step 3: JSZip loaded: ' + (typeof JSZip));
+    </script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        addLog('Step 4: Module script running');
+
+        try {
+            const { ImageProcessor } = await import('./js/image-processor.js');
+            addLog('Step 5: ImageProcessor loaded OK');
+        } catch(e) {
+            addLog('Step 5 FAIL: ' + e.message);
+        }
+
+        try {
+            const { LayerGenerator } = await import('./js/layer-generator.js');
+            addLog('Step 6: LayerGenerator loaded OK');
+        } catch(e) {
+            addLog('Step 6 FAIL: ' + e.message);
+        }
+
+        try {
+            const { SvgExporter } = await import('./js/svg-exporter.js');
+            addLog('Step 7: SvgExporter loaded OK');
+        } catch(e) {
+            addLog('Step 7 FAIL: ' + e.message);
+        }
+
+        addLog('Step 8: Skipping Three.js (lazy). All basic modules OK!');
+        document.getElementById('status').textContent = 'ALL OK';
+        document.getElementById('status').style.color = '#0f0';
+    </script>
+</body>
+</html>

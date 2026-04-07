@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test headerB - No JS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Test headerB - No JS</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary">Nahrat obrazok</button>
+            <button class="btn btn-secondary" disabled>Exportovat SVG</button>
+        </div>
+    </header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div class="drop-hint"><p>Drop zone</p></div>
+                </div>
+            </section>
+            <section class="controls-section">
+                <select><option>Auto</option></select>
+                <label>T: 30</label>
+                <input type="range" min="1" max="100" value="30">
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D</h2>
+            <div class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div class="viewer-placeholder"><p>PH</p></div>
+            </div>
+        </section>
+    </main>
+    <footer><div class="layers-strip"><p>-</p></div></footer>
+</body>
+</html>

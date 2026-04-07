@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test headerD</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header><h1>Test headerD</h1></header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint"><p>Drop zone</p></div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+            <section class="controls-section">
+                <select id="bg-method"><option value="auto">Auto</option><option value="alpha">Alpha</option><option value="click">Klik</option></select>
+                <label>T: <span id="threshold-val">30</span></label>
+                <input type="range" id="threshold" min="1" max="100" value="30">
+                <label>L: <span id="layers-val">5</span></label>
+                <input type="range" id="layer-count" min="3" max="8" value="5">
+                <label>E: <span id="erosion-val">8</span></label>
+                <input type="range" id="erosion-strength" min="3" max="20" value="8">
+                <div id="color-pickers" class="color-pickers"></div>
+                <button id="btn-generate" class="btn btn-primary btn-full" disabled>Gen</button>
+                <div id="progress-bar" class="progress-bar" hidden><div class="progress-bar-track"><div id="progress-fill" class="progress-bar-fill"></div></div><span id="progress-text" class="progress-text"></span></div>
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder"><p>PH</p></div>
+            </div>
+            <div class="viewer-controls">
+                <label><span id="open-angle-val">90</span></label>
+                <input type="range" id="open-angle" min="0" max="180" value="90">
+                <button id="btn-animate" class="btn btn-small">A</button>
+            </div>
+        </section>
+    </main>
+    <footer><div id="layers-strip" class="layers-strip"><p class="placeholder-text">-</p></div></footer>
+
+    <button id="btn-upload" class="btn btn-primary">Upload</button>
+    <button id="btn-export" class="btn btn-secondary" disabled>Export</button>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pop-Up Card Creator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header><h1>Pop-Up Card Creator (inline test)</h1></header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojový obrázok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint"><p>Presuňte obrázok sem alebo kliknite</p></div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+            <section class="controls-section">
+                <h2>Nastavenia</h2>
+                <label>Metóda:</label>
+                <select id="bg-method">
+                    <option value="auto">Auto</option>
+                    <option value="alpha">Alpha kanál</option>
+                    <option value="click">Klik na farbu</option>
+                </select>
+                <label>Tolerancia: <span id="threshold-val">30</span></label>
+                <input type="range" id="threshold" min="1" max="100" value="30">
+                <label>Počet vrstiev: <span id="layers-val">5</span></label>
+                <input type="range" id="layer-count" min="3" max="8" value="5">
+                <label>Sila erózie: <span id="erosion-val">8</span></label>
+                <input type="range" id="erosion-strength" min="3" max="20" value="8">
+                <label>Farby:</label>
+                <div id="color-pickers" class="color-pickers"></div>
+                <button id="btn-generate" class="btn btn-primary btn-full" disabled>Generovať vrstvy</button>
+                <div id="progress-bar" class="progress-bar" hidden>
+                    <div class="progress-bar-track"><div id="progress-fill" class="progress-bar-fill"></div></div>
+                    <span id="progress-text" class="progress-text"></span>
+                </div>
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D Náhľad</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder"><p>Nahrajte obrázok a vygenerujte vrstvy</p></div>
+            </div>
+            <div class="viewer-controls">
+                <label>Otvorenie: <span id="open-angle-val">90°</span></label>
+                <input type="range" id="open-angle" min="0" max="180" value="90">
+                <button id="btn-animate" class="btn btn-small">Animácia</button>
+            </div>
+        </section>
+    </main>
+    <footer><div id="layers-strip" class="layers-strip"><p class="placeholder-text">Vrstvy sa zobrazia po generovaní</p></div></footer>
+
+<script>
+// ============ ImageProcessor ============
+class ImageProcessor {
+    constructor() {
+        this.sourceCanvas = null; this.sourceCtx = null;
+        this.width = 0; this.height = 0;
+        this.imageData = null; this.mask = null;
+    }
+
+    loadImage(file, canvas) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 800;
+                let w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    const scale = maxDim / Math.max(w, h);
+                    w = Math.round(w * scale); h = Math.round(h * scale);
+                }
+                canvas.width = w; canvas.height = h;
+                this.sourceCanvas = canvas;
+                this.sourceCtx = canvas.getContext('2d', { willReadFrequently: true });
+                this.sourceCtx.drawImage(img, 0, 0, w, h);
+                this.width = w; this.height = h;
+                this.imageData = this.sourceCtx.getImageData(0, 0, w, h);
+                URL.revokeObjectURL(img.src);
+                resolve();
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    generateMask(method, tolerance, clickPoint) {
+        const { width: w, height: h, imageData } = this;
+        const data = imageData.data;
+        this.mask = new Uint8Array(w * h);
+        if (method === 'alpha') {
+            const threshold = Math.round((tolerance / 100) * 255);
+            for (let i = 0; i < this.mask.length; i++) this.mask[i] = data[i * 4 + 3] > threshold ? 1 : 0;
+        } else if (method === 'click' && clickPoint) {
+            this._floodFill(data, [clickPoint], tolerance);
+        } else {
+            this._floodFill(data, [{x:0,y:0},{x:w-1,y:0},{x:0,y:h-1},{x:w-1,y:h-1}], tolerance);
+        }
+        this._morphClose(this.mask, w, h, 2);
+        return this.mask;
+    }
+
+    _floodFill(data, seeds, tolerance) {
+        const w = this.width, h = this.height, tol = tolerance * 2.55;
+        const visited = new Uint8Array(w * h);
+        this.mask.fill(1);
+        for (const seed of seeds) {
+            const si = (seed.y * w + seed.x) * 4;
+            const sr = data[si], sg = data[si+1], sb = data[si+2];
+            const stack = [seed.x + seed.y * w];
+            while (stack.length > 0) {
+                const idx = stack.pop();
+                if (visited[idx]) continue;
+                visited[idx] = 1;
+                const pi = idx * 4;
+                if (Math.abs(data[pi]-sr) <= tol && Math.abs(data[pi+1]-sg) <= tol && Math.abs(data[pi+2]-sb) <= tol) {
+                    this.mask[idx] = 0;
+                    const x = idx % w, y = (idx - x) / w;
+                    if (x > 0 && !visited[idx-1]) stack.push(idx-1);
+                    if (x < w-1 && !visited[idx+1]) stack.push(idx+1);
+                    if (y > 0 && !visited[idx-w]) stack.push(idx-w);
+                    if (y < h-1 && !visited[idx+w]) stack.push(idx+w);
+                }
+            }
+        }
+    }
+
+    _morphClose(mask, w, h, radius) {
+        const dilated = new Uint8Array(w * h);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            let val = 0;
+            for (let dy = -radius; dy <= radius && !val; dy++)
+                for (let dx = -radius; dx <= radius && !val; dx++) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h && mask[ny*w+nx]) val = 1;
+                }
+            dilated[y*w+x] = val;
+        }
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            let val = 1;
+            for (let dy = -radius; dy <= radius && val; dy++)
+                for (let dx = -radius; dx <= radius && val; dx++) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) { if (!dilated[ny*w+nx]) val = 0; }
+                    else val = 0;
+                }
+            mask[y*w+x] = val;
+        }
+    }
+
+    renderMask(mask, canvas) {
+        canvas.width = this.width; canvas.height = this.height;
+        const ctx = canvas.getContext('2d');
+        const img = ctx.createImageData(this.width, this.height);
+        for (let i = 0; i < mask.length; i++) {
+            const v = mask[i] ? 255 : 0;
+            img.data[i*4] = v; img.data[i*4+1] = v; img.data[i*4+2] = v; img.data[i*4+3] = 255;
+        }
+        ctx.putImageData(img, 0, 0);
+    }
+}
+
+// ============ ContourTracer ============
+class ContourTracer {
+    trace(mask, w, h) {
+        const pw = w+2, ph = h+2;
+        const padded = new Uint8Array(pw * ph);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) padded[(y+1)*pw+(x+1)] = mask[y*w+x];
+
+        const visited = new Uint8Array((pw-1)*(ph-1));
+        const contours = [];
+        for (let y = 0; y < ph-1; y++) for (let x = 0; x < pw-1; x++) {
+            const ci = y*(pw-1)+x;
+            if (visited[ci]) continue;
+            const cell = this._cv(padded,pw,x,y);
+            if (cell === 0 || cell === 15) continue;
+            const c = this._tc(padded,pw,ph,x,y,visited);
+            if (c && c.length > 4) contours.push(c.map(p => ({x:p.x-1, y:p.y-1})));
+        }
+        contours.sort((a,b) => b.length - a.length);
+        return contours.filter(c => c.length > 10);
+    }
+
+    _cv(g,w,x,y) { return (g[y*w+x]?8:0)|(g[y*w+x+1]?4:0)|(g[(y+1)*w+x+1]?2:0)|(g[(y+1)*w+x]?1:0); }
+
+    _tc(g,w,h,sx,sy,vis) {
+        const pts = []; let x=sx,y=sy,dir=0;
+        for (let s=0; s<w*h*2; s++) {
+            const ci=y*(w-1)+x, cell=this._cv(g,w,x,y);
+            if (cell===0||cell===15) break;
+            vis[ci]=1;
+            const px=x,py=y; let pt=null;
+            switch(cell) {
+                case 1: pt={x:px,y:py+.5};dir=2;break; case 2: pt={x:px+.5,y:py+1};dir=0;break;
+                case 3: pt={x:px,y:py+.5};dir=2;break; case 4: pt={x:px+1,y:py+.5};dir=0;break;
+                case 5: pt={x:px+.5,y:py};dir=(dir===2)?3:1;break; case 6: pt={x:px+.5,y:py+1};dir=1;break;
+                case 7: pt={x:px,y:py+.5};dir=2;break; case 8: pt={x:px+.5,y:py};dir=3;break;
+                case 9: pt={x:px+.5,y:py};dir=3;break; case 10: pt={x:px+1,y:py+.5};dir=(dir===3)?0:2;break;
+                case 11: pt={x:px+.5,y:py};dir=3;break; case 12: pt={x:px+1,y:py+.5};dir=0;break;
+                case 13: pt={x:px+1,y:py+.5};dir=0;break; case 14: pt={x:px+.5,y:py+1};dir=1;break;
+            }
+            if (pt) pts.push(pt);
+            switch(dir) { case 0:x++;break; case 1:y++;break; case 2:x--;break; case 3:y--;break; }
+            if (x<0||x>=w-1||y<0||y>=h-1) break;
+            if (x===sx&&y===sy&&s>2) break;
+        }
+        return pts;
+    }
+
+    simplify(points, epsilon) {
+        if (points.length < 3) return points;
+        let maxD=0,maxI=0;
+        const f=points[0], l=points[points.length-1];
+        for (let i=1;i<points.length-1;i++) {
+            const d=this._pld(points[i],f,l);
+            if (d>maxD) {maxD=d;maxI=i;}
+        }
+        if (maxD>epsilon) {
+            const left=this.simplify(points.slice(0,maxI+1),epsilon);
+            const right=this.simplify(points.slice(maxI),epsilon);
+            return left.slice(0,-1).concat(right);
+        }
+        return [f,l];
+    }
+
+    _pld(p,a,b) {
+        const dx=b.x-a.x,dy=b.y-a.y,ls=dx*dx+dy*dy;
+        if (ls===0) return Math.hypot(p.x-a.x,p.y-a.y);
+        const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/ls));
+        return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));
+    }
+
+    smooth(points, iterations) {
+        let pts = points;
+        for (let iter=0;iter<iterations;iter++) {
+            const np = [];
+            for (let i=0;i<pts.length;i++) {
+                const j=(i+1)%pts.length, p0=pts[i], p1=pts[j];
+                np.push({x:.75*p0.x+.25*p1.x, y:.75*p0.y+.25*p1.y});
+                np.push({x:.25*p0.x+.75*p1.x, y:.25*p0.y+.75*p1.y});
+            }
+            pts = np;
+        }
+        return pts;
+    }
+}
+
+// ============ LayerGenerator ============
+class LayerGenerator {
+    constructor() { this.tracer = new ContourTracer(); }
+
+    generate(mask, w, h, layerCount, erosionStrength, onProgress) {
+        const layers = [];
+        if (onProgress) onProgress(0, layerCount);
+        let currentMask = new Uint8Array(mask);
+        const c0 = this.tracer.trace(currentMask, w, h);
+        const s0 = c0.map(c => this.tracer.smooth(this.tracer.simplify(c, 1.5), 2));
+        layers.push({mask: new Uint8Array(currentMask), contours: c0, simplified: s0});
+
+        for (let i = 1; i < layerCount; i++) {
+            if (onProgress) onProgress(i, layerCount);
+            const eroded = this._erode(mask, w, h, erosionStrength * i);
+            let has = false;
+            for (let j=0;j<eroded.length;j++) if (eroded[j]) {has=true;break;}
+            if (!has) break;
+            const c = this.tracer.trace(eroded, w, h);
+            const s = c.map(cc => this.tracer.smooth(this.tracer.simplify(cc, 1.5), 2));
+            layers.push({mask: eroded, contours: c, simplified: s});
+        }
+        return layers;
+    }
+
+    _erode(mask, w, h, radius) {
+        if (radius <= 0) return new Uint8Array(mask);
+        let current = new Uint8Array(mask), temp = new Uint8Array(w*h);
+        for (let y=0;y<h;y++) { const row=y*w; for (let x=0;x<w;x++) {
+            let ok=true;
+            for (let dx=-radius;dx<=radius;dx++) { const nx=x+dx; if(nx<0||nx>=w||!current[row+nx]){ok=false;break;} }
+            temp[row+x]=ok?1:0;
+        }}
+        const result = new Uint8Array(w*h);
+        for (let x=0;x<w;x++) for (let y=0;y<h;y++) {
+            let ok=true;
+            for (let dy=-radius;dy<=radius;dy++) { const ny=y+dy; if(ny<0||ny>=h||!temp[ny*w+x]){ok=false;break;} }
+            result[y*w+x]=ok?1:0;
+        }
+        return result;
+    }
+
+    renderLayerPreview(layer, w, h, canvas, color) {
+        canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='#000'; ctx.fillRect(0,0,w,h);
+        const img=ctx.createImageData(w,h);
+        const r=parseInt(color.slice(1,3),16)||255, g=parseInt(color.slice(3,5),16)||255, b=parseInt(color.slice(5,7),16)||255;
+        for (let i=0;i<layer.mask.length;i++) {
+            if (layer.mask[i]) { img.data[i*4]=r; img.data[i*4+1]=g; img.data[i*4+2]=b; }
+            img.data[i*4+3]=255;
+        }
+        ctx.putImageData(img, 0, 0);
+    }
+}
+
+// ============ App ============
+const imageProcessor = new ImageProcessor();
+const layerGenerator = new LayerGenerator();
+let currentLayers = null, imageLoaded = false, clickPointForBg = null;
+const defaultColors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#9b59b6','#1abc9c','#e91e63'];
+
+const fileInput = document.getElementById('file-input');
+const btnGenerate = document.getElementById('btn-generate');
+const btnAnimate = document.getElementById('btn-animate');
+const dropZone = document.getElementById('drop-zone');
+const dropHint = document.getElementById('drop-hint');
+const sourceCanvas = document.getElementById('source-canvas');
+const threeCanvas = document.getElementById('three-canvas');
+const viewerPlaceholder = document.getElementById('viewer-placeholder');
+const layersStrip = document.getElementById('layers-strip');
+const bgMethodSelect = document.getElementById('bg-method');
+const thresholdSlider = document.getElementById('threshold');
+const thresholdVal = document.getElementById('threshold-val');
+const layerCountSlider = document.getElementById('layer-count');
+const layersVal = document.getElementById('layers-val');
+const erosionSlider = document.getElementById('erosion-strength');
+const erosionVal = document.getElementById('erosion-val');
+const openAngleSlider = document.getElementById('open-angle');
+const openAngleVal = document.getElementById('open-angle-val');
+const colorPickersDiv = document.getElementById('color-pickers');
+const progressBar = document.getElementById('progress-bar');
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+
+function initColorPickers(count) {
+    colorPickersDiv.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = defaultColors[i % defaultColors.length];
+        colorPickersDiv.appendChild(input);
+    }
+}
+
+function getColors() { return Array.from(colorPickersDiv.querySelectorAll('input[type=color]')).map(i=>i.value); }
+
+fileInput.addEventListener('change', e => { if (e.target.files.length > 0) loadFile(e.target.files[0]); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]); });
+dropZone.addEventListener('click', e => {
+    if (!imageLoaded) { fileInput.click(); return; }
+    if (bgMethodSelect.value === 'click') {
+        const rect = sourceCanvas.getBoundingClientRect();
+        clickPointForBg = {
+            x: Math.max(0, Math.min(Math.round((e.clientX-rect.left)*(sourceCanvas.width/rect.width)), sourceCanvas.width-1)),
+            y: Math.max(0, Math.min(Math.round((e.clientY-rect.top)*(sourceCanvas.height/rect.height)), sourceCanvas.height-1))
+        };
+        generateMask();
+    }
+});
+
+thresholdSlider.addEventListener('input', () => { thresholdVal.textContent = thresholdSlider.value; if (imageLoaded) generateMask(); });
+layerCountSlider.addEventListener('input', () => { layersVal.textContent = layerCountSlider.value; initColorPickers(parseInt(layerCountSlider.value)); });
+erosionSlider.addEventListener('input', () => { erosionVal.textContent = erosionSlider.value; });
+openAngleSlider.addEventListener('input', () => { openAngleVal.textContent = parseInt(openAngleSlider.value) + '°'; });
+bgMethodSelect.addEventListener('change', () => { if (imageLoaded && bgMethodSelect.value !== 'click') { clickPointForBg = null; generateMask(); } });
+btnGenerate.addEventListener('click', generateLayers);
+
+async function loadFile(file) {
+    if (!file.type.startsWith('image/')) { alert('Prosím nahrajte obrázok'); return; }
+    try {
+        await imageProcessor.loadImage(file, sourceCanvas);
+        imageLoaded = true;
+        dropZone.classList.add('has-image');
+        btnGenerate.disabled = false;
+        clickPointForBg = null;
+        generateMask();
+    } catch(err) { console.error(err); alert('Nepodarilo sa načítať obrázok.'); }
+}
+
+function generateMask() {
+    if (!imageLoaded) return;
+    imageProcessor.generateMask(bgMethodSelect.value, parseInt(thresholdSlider.value), clickPointForBg);
+    imageProcessor.renderMask(imageProcessor.mask, sourceCanvas);
+}
+
+function showProgress(pct, text) { progressBar.hidden = false; progressFill.style.width = pct+'%'; progressText.textContent = text; }
+function hideProgress() { progressBar.hidden = true; }
+
+async function generateLayers() {
+    if (!imageLoaded || !imageProcessor.mask) generateMask();
+    btnGenerate.disabled = true; btnGenerate.textContent = 'Generujem...';
+    showProgress(5, 'Pripravujem...');
+    await new Promise(r => setTimeout(r, 0));
+
+    currentLayers = layerGenerator.generate(
+        imageProcessor.mask, imageProcessor.width, imageProcessor.height,
+        parseInt(layerCountSlider.value), parseInt(erosionSlider.value),
+        (i, total) => showProgress(15 + Math.round((i/total)*50), 'Erózia ' + (i+1) + '/' + total)
+    );
+
+    if (currentLayers.length === 0) { hideProgress(); btnGenerate.disabled = false; btnGenerate.textContent = 'Generovať vrstvy'; alert('Nepodarilo sa vygenerovať vrstvy.'); return; }
+
+    initColorPickers(currentLayers.length);
+    updateLayerPreviews();
+    showProgress(100, 'Hotovo!');
+    setTimeout(hideProgress, 800);
+    btnGenerate.disabled = false; btnGenerate.textContent = 'Generovať vrstvy';
+}
+
+function updateLayerPreviews() {
+    if (!currentLayers) return;
+    const colors = getColors();
+    layersStrip.innerHTML = '';
+    for (let i = 0; i < currentLayers.length; i++) {
+        const div = document.createElement('div'); div.className = 'layer-thumb';
+        const canvas = document.createElement('canvas');
+        layerGenerator.renderLayerPreview(currentLayers[i], imageProcessor.width, imageProcessor.height, canvas, colors[i] || '#fff');
+        const label = document.createElement('span'); label.textContent = 'Vrstva ' + (i+1);
+        div.appendChild(canvas); div.appendChild(label); layersStrip.appendChild(div);
+    }
+}
+
+initColorPickers(parseInt(layerCountSlider.value));
+console.log('App initialized OK');
+</script>
+</body>
+</html>

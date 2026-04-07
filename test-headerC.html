@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test headerC</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Test headerC - Minimal JS</h1>
+        <div class="header-actions">
+            <button id="btn-upload" class="btn btn-primary">Nahrat obrazok</button>
+            <button id="btn-export" class="btn btn-secondary" disabled>Exportovat SVG</button>
+        </div>
+    </header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div class="drop-hint"><p>Drop zone</p></div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D</h2>
+            <div class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div class="viewer-placeholder"><p>PH</p></div>
+            </div>
+        </section>
+    </main>
+    <script>
+        const btnUpload = document.getElementById('btn-upload');
+        const fileInput = document.getElementById('file-input');
+        btnUpload.addEventListener('click', () => fileInput.click());
+        console.log('Minimal JS loaded OK');
+    </script>
+</body>
+</html>

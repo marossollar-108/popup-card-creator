@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App2</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header><h1>Test App2 — Inline Init</h1></header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint"><p>Drop zone</p></div>
+                </div>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </section>
+            <section class="controls-section">
+                <div class="control-group">
+                    <select id="bg-method"><option value="auto">Auto</option></select>
+                </div>
+                <div class="control-group">
+                    <label>Tolerancia: <span id="threshold-val">30</span></label>
+                    <input type="range" id="threshold" min="1" max="100" value="30">
+                </div>
+                <div class="control-group">
+                    <label>Pocet: <span id="layers-val">5</span></label>
+                    <input type="range" id="layer-count" min="3" max="8" value="5">
+                </div>
+                <div class="control-group">
+                    <label>Erozia: <span id="erosion-val">8</span></label>
+                    <input type="range" id="erosion-strength" min="3" max="20" value="8">
+                </div>
+                <div class="control-group">
+                    <div id="color-pickers" class="color-pickers"></div>
+                </div>
+                <button id="btn-generate" class="btn btn-primary btn-full" disabled>Generovat</button>
+                <div id="progress-bar" class="progress-bar" hidden>
+                    <div class="progress-bar-track"><div id="progress-fill" class="progress-bar-fill"></div></div>
+                    <span id="progress-text" class="progress-text"></span>
+                </div>
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder"><p>Placeholder</p></div>
+            </div>
+            <div class="viewer-controls">
+                <label>Uhol: <span id="open-angle-val">90</span></label>
+                <input type="range" id="open-angle" min="0" max="180" value="90">
+                <button id="btn-animate" class="btn btn-small">Anim</button>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <div id="layers-strip" class="layers-strip"><p class="placeholder-text">-</p></div>
+    </footer>
+    <div id="btn-upload" hidden></div>
+    <div id="btn-export" hidden></div>
+
+    <script type="module">
+        console.log('A: getting DOM elements...');
+        const fileInput = document.getElementById('file-input');
+        const btnUpload = document.getElementById('btn-upload');
+        const btnExport = document.getElementById('btn-export');
+        const btnGenerate = document.getElementById('btn-generate');
+        const btnAnimate = document.getElementById('btn-animate');
+        const dropZone = document.getElementById('drop-zone');
+        const dropHint = document.getElementById('drop-hint');
+        const sourceCanvas = document.getElementById('source-canvas');
+        const threeCanvas = document.getElementById('three-canvas');
+        const viewerPlaceholder = document.getElementById('viewer-placeholder');
+        const layersStrip = document.getElementById('layers-strip');
+        const bgMethodSelect = document.getElementById('bg-method');
+        const thresholdSlider = document.getElementById('threshold');
+        const thresholdVal = document.getElementById('threshold-val');
+        const layerCountSlider = document.getElementById('layer-count');
+        const layersVal = document.getElementById('layers-val');
+        const erosionSlider = document.getElementById('erosion-strength');
+        const erosionVal = document.getElementById('erosion-val');
+        const openAngleSlider = document.getElementById('open-angle');
+        const openAngleVal = document.getElementById('open-angle-val');
+        const colorPickersDiv = document.getElementById('color-pickers');
+        const progressBar = document.getElementById('progress-bar');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        console.log('B: DOM elements OK');
+
+        // Color pickers
+        const defaultColors = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db'];
+        colorPickersDiv.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = defaultColors[i];
+            colorPickersDiv.appendChild(input);
+        }
+        console.log('C: color pickers OK');
+
+        // Event listeners
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); });
+        dropZone.addEventListener('dragleave', () => {});
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); });
+        thresholdSlider.addEventListener('input', () => {
+            thresholdVal.textContent = thresholdSlider.value;
+        });
+        layerCountSlider.addEventListener('input', () => {
+            layersVal.textContent = layerCountSlider.value;
+        });
+        erosionSlider.addEventListener('input', () => {
+            erosionVal.textContent = erosionSlider.value;
+        });
+        openAngleSlider.addEventListener('input', () => {
+            openAngleVal.textContent = openAngleSlider.value + '°';
+        });
+        console.log('D: event listeners OK');
+
+        document.title = 'Test App2 — ALL OK';
+        console.log('E: ALL DONE - page should be stable');
+    </script>
+</body>
+</html>

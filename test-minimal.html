@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Minimal</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Pop-Up Card Creator - MINIMAL TEST</h1>
+    </header>
+    <main>
+        <aside class="panel-left">
+            <section class="source-section">
+                <h2>Zdrojovy obrazok</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <canvas id="source-canvas"></canvas>
+                    <div id="drop-hint" class="drop-hint">
+                        <p>Test</p>
+                    </div>
+                </div>
+            </section>
+        </aside>
+        <section class="panel-right">
+            <h2>3D Nahlad</h2>
+            <div id="viewer-container" class="viewer-container">
+                <canvas id="three-canvas"></canvas>
+                <div id="viewer-placeholder" class="viewer-placeholder">
+                    <p>Placeholder</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script>
+        document.title = 'Minimal - OK';
+        console.log('Minimal page loaded OK');
+    </script>
+</body>
+</html>

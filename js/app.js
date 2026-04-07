@@ -72,8 +72,8 @@ function getColors() {
 
 // ---- Event Handlers ----
 
-// Upload button
-btnUpload.addEventListener('click', () => fileInput.click());
+// Upload button (hidden, kept for compatibility)
+if (btnUpload) btnUpload.addEventListener('click', () => fileInput.click());
 
 // File input
 fileInput.addEventListener('change', (e) => {
@@ -335,7 +335,8 @@ async function generateLayers() {
     // Hide progress after a short delay
     setTimeout(() => hideProgress(), 800);
 
-    btnExport.disabled = false;
+    const exportWrapper = document.getElementById('export-wrapper');
+    if (exportWrapper) exportWrapper.hidden = false;
     btnGenerate.disabled = false;
     btnGenerate.textContent = 'Generovať vrstvy';
 }
